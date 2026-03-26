@@ -3951,14 +3951,20 @@ function hideLongpressPopup(){
 }
 
 function attachLongpress(div, item, tapFn){
-  var startX = 0, startY = 0, moved = false;
+  var startX = 0, startY = 0, moved = false, longPressed = false;
+
   div.addEventListener("touchstart", function(e){
     var t = e.touches[0];
-    startX = t.clientX; startY = t.clientY; moved = false;
+    startX = t.clientX; startY = t.clientY;
+    moved = false; longPressed = false;
     _lpTimer = setTimeout(function(){
-      if(!moved) showLongpressPopup(item, startX, startY);
+      if(!moved){
+        longPressed = true;
+        showLongpressPopup(item, startX, startY);
+      }
     }, 500);
   }, {passive:true});
+
   div.addEventListener("touchmove", function(e){
     var t = e.touches[0];
     var dx = Math.abs(t.clientX - startX);
@@ -3969,6 +3975,7 @@ function attachLongpress(div, item, tapFn){
       hideLongpressPopup();
     }
   }, {passive:true});
+
   div.addEventListener("touchend", function(e){
     clearTimeout(_lpTimer);
     var el = document.getElementById("longpress-popup");
@@ -3976,7 +3983,21 @@ function attachLongpress(div, item, tapFn){
       hideLongpressPopup();
       return;
     }
-    if(!moved) tapFn();
+    if(!moved && !longPressed){
+      tapFn();
+      e.preventDefault(); // clickの二重発火を防ぐ
+    }
+  });
+
+  // Android用フォールバック
+  div.addEventListener("click", function(e){
+    var el = document.getElementById("longpress-popup");
+    if(el && el.className==="show"){
+      hideLongpressPopup();
+      return;
+    }
+    if(!longPressed) tapFn();
+    longPressed = false;
   });
 }
 
