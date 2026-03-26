@@ -53,7 +53,12 @@ body{display:flex;flex-direction:column;align-items:center;min-height:100dvh}
 .enemy-icon{font-size:42px;filter:drop-shadow(0 0 8px #ff000044);transition:transform .1s}
 .enemy-icon.hit{transform:scale(1.2);filter:drop-shadow(0 0 16px #ff4444)}
 .enemy-info{flex:1}
-.enemy-name{font-family:'Cinzel',serif;font-size:14px;color:var(--red-bright);margin-bottom:6px}
+.enemy-name{font-family:'Cinzel',serif;font-size:14px;color:var(--red-bright);margin-bottom:4px}
+.enemy-attrs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px}
+.attr-badge{font-size:9px;padding:1px 5px;border-radius:4px;font-weight:700}
+.attr-weak{background:#ff440022;color:#ff4444;border:1px solid #ff444466}
+.attr-resist{background:#4a9fff22;color:#4a9fff;border:1px solid #4a9fff66}
+.dmg-weak{color:#ffee00;font-size:20px;text-shadow:0 0 10px #ffee00}
 .enemy-hp-bg{height:10px;background:#1a0808;border-radius:5px;border:1px solid #5a1010;overflow:hidden}
 .enemy-hp-fill{height:100%;background:linear-gradient(90deg,#5a0000,#cc2020);border-radius:5px;transition:width .3s ease}
 .enemy-hp-text{font-size:10px;color:var(--text-dim);margin-top:3px;text-align:right}
@@ -334,6 +339,7 @@ animation:popFade .15s ease;
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
     <div style="display:flex;gap:6px">
       <div onclick="openHelp()" style="font-size:12px;color:var(--text-dim);background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:3px 12px;cursor:pointer;letter-spacing:1px">&#10067; HELP</div>
+      <div onclick="openAchievements()" style="font-size:12px;color:var(--text-dim);background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:3px 12px;cursor:pointer;letter-spacing:1px">🏆 実績</div>
       <div onclick="openStats()" style="font-size:12px;color:var(--text-dim);background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:3px 12px;cursor:pointer;letter-spacing:1px">&#128202; STATS</div>
       <div onclick="confirmReset()" style="font-size:12px;color:#ff6b6b;background:var(--panel2);border:1px solid #ff6b6b44;border-radius:8px;padding:3px 12px;cursor:pointer;letter-spacing:1px">&#128260; リセット</div>
       <div onclick="toggleSound()" id="soundBtn" style="font-size:12px;color:var(--text-dim);background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:3px 12px;cursor:pointer;letter-spacing:1px">&#128266; ON</div>
@@ -393,6 +399,7 @@ animation:popFade .15s ease;
         <div class="enemy-icon" id="enemyIcon">👹</div>
         <div class="enemy-info">
           <div class="enemy-name" id="enemyName">ゴブリン</div>
+          <div class="enemy-attrs" id="enemyAttrs"></div>
           <div class="enemy-hp-bg"><div class="enemy-hp-fill" id="enemyHpBar" style="width:100%"></div></div>
           <div class="enemy-hp-text"><span id="enemyHpCur">30</span> / <span id="enemyHpMax">30</span></div>
         </div>
@@ -427,14 +434,14 @@ animation:popFade .15s ease;
     <div class="inv-panel">
       <div class="panel-title">INVENTORY ― <span id="invCount">0</span> / 64</div>
       <div class="inv-grid" id="invGrid"></div>
-      <div class="autosell-row">
-        <div class="autosell-label">🔄 自動売却（未ロック）</div>
-        <select class="rarity-select" id="autosellThreshold">
-          <option value="none">OFF</option>
-          <option value="common" selected>Common以下</option>
-          <option value="magic">Magic以下</option>
-          <option value="rare">Rare以下</option>
-        </select>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;letter-spacing:1px">🗑️ まとめて売却（未ロック）</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <div onclick="quickSell('common')" style="padding:5px 10px;background:var(--panel2);border:1px solid #4a6fa5;border-radius:6px;color:#4a6fa5;font-size:11px;font-weight:700;cursor:pointer">Common以下</div>
+          <div onclick="quickSell('magic')"  style="padding:5px 10px;background:var(--panel2);border:1px solid #4a9fff;border-radius:6px;color:#4a9fff;font-size:11px;font-weight:700;cursor:pointer">Magic以下</div>
+          <div onclick="quickSell('rare')"   style="padding:5px 10px;background:var(--panel2);border:1px solid #c9a84c;border-radius:6px;color:#c9a84c;font-size:11px;font-weight:700;cursor:pointer">Rare以下</div>
+          <div onclick="quickSell('all')"    style="padding:5px 10px;background:var(--panel2);border:1px solid #ff6b6b;border-radius:6px;color:#ff6b6b;font-size:11px;font-weight:700;cursor:pointer">全部</div>
+        </div>
       </div>
     </div>
   </div>
@@ -516,14 +523,21 @@ animation:popFade .15s ease;
   <div class="bottom-sheet">
     <div class="sheet-title" style="color:#ff6a00">🛠️ DEBUG MENU</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      <button onclick="debugMaxGold()"         style="padding:12px;background:#1a1200;border:1px solid var(--gold);border-radius:10px;color:var(--gold);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">💰 ゴールド MAX (9,999,999G)</button>
-      <button onclick="debugMaxLevel()"        style="padding:12px;background:#0a1a0a;border:1px solid #4caf50;border-radius:10px;color:#4caf50;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">⬆️ レベル50 / ステータスMAX</button>
-      <button onclick="debugUnlockAllFloors()" style="padding:12px;background:#0a0a1a;border:1px solid #4a9fff;border-radius:10px;color:#4a9fff;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🗺️ 全フロア解放 (踏破率300%)</button>
-      <button onclick="debugBestEquip()"       style="padding:12px;background:#1a0a1a;border:1px solid #d400c8;border-radius:10px;color:#d400c8;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🎁 最強装備を一式装備</button>
-      <button onclick="debugUnlockAllSkills()" style="padding:12px;background:#1a1a0a;border:1px solid #c9a84c;border-radius:10px;color:#c9a84c;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">💎 全スキル解放 (MAXLV)</button>
-      <button onclick="debugUnlockAllTechs()"  style="padding:12px;background:#0a1a1a;border:1px solid #00b4d8;border-radius:10px;color:#00b4d8;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🔮 全技解放 (MAXLV)</button>
+      <button onclick="debugGodSword()"          style="padding:12px;background:#1a0000;border:1px solid #ff4444;border-radius:10px;color:#ff4444;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">⚔️ 神滅の剣を装備（全敵ワンパン）</button>
+      <button onclick="debugMaxGold()"           style="padding:12px;background:#1a1200;border:1px solid var(--gold);border-radius:10px;color:var(--gold);font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">💰 ゴールド MAX (9,999,999G)</button>
+      <button onclick="debugMaxLevel()"          style="padding:12px;background:#0a1a0a;border:1px solid #4caf50;border-radius:10px;color:#4caf50;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">⬆️ レベル50 / ステータスMAX</button>
+      <button onclick="debugUnlockAllFloors()"   style="padding:12px;background:#0a0a1a;border:1px solid #4a9fff;border-radius:10px;color:#4a9fff;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🗺️ 全フロア解放 (踏破率300%)</button>
+      <button onclick="debugUnlockAllSkills()"   style="padding:12px;background:#1a1a0a;border:1px solid #c9a84c;border-radius:10px;color:#c9a84c;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">💎 全スキル解放 (MAXLV)</button>
+      <button onclick="debugUnlockAllTechs()"    style="padding:12px;background:#0a1a1a;border:1px solid #00b4d8;border-radius:10px;color:#00b4d8;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;cursor:pointer">🔮 全技解放 (MAXLV)</button>
     </div>
     <div style="text-align:center;margin-top:14px;font-size:10px;color:var(--text-dim)">タップで閉じる</div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ach-modal" onclick="closeModal('ach-modal',event)">
+  <div class="bottom-sheet">
+    <div class="sheet-title">🏆 ACHIEVEMENTS</div>
+    <div id="achContent"></div>
   </div>
 </div>
 
@@ -621,7 +635,147 @@ animation:popFade .15s ease;
 // CONSTANTS
 // ============================================================
 var KILLS_TO_CLEAR = 50;
+
+// ============================================================
+// ACHIEVEMENTS
+// ランク: bronze/silver/gold/platinum
+// ============================================================
+var ACHIEVEMENTS = [
+  // ===== BATTLE =====
+  {id:"kill100",     cat:"⚔️ BATTLE",  rank:"bronze",   title:"新米冒険者",       desc:"敵を100体討伐",              reward:1000,     check:function(g){ return (g.stats.totalKills||0)>=100; }},
+  {id:"kill1k",      cat:"⚔️ BATTLE",  rank:"bronze",   title:"歴戦の戦士",       desc:"敵を1,000体討伐",            reward:5000,     check:function(g){ return (g.stats.totalKills||0)>=1000; }},
+  {id:"kill10k",     cat:"⚔️ BATTLE",  rank:"silver",   title:"百戦錬磨",         desc:"敵を10,000体討伐",           reward:100000,   check:function(g){ return (g.stats.totalKills||0)>=10000; }},
+  {id:"kill100k",    cat:"⚔️ BATTLE",  rank:"silver",   title:"伝説の剣士",       desc:"敵を100,000体討伐",          reward:500000,   check:function(g){ return (g.stats.totalKills||0)>=100000; }},
+  {id:"kill1m",      cat:"⚔️ BATTLE",  rank:"gold",     title:"虐殺者",           desc:"敵を1,000,000体討伐",        reward:5000000,  check:function(g){ return (g.stats.totalKills||0)>=1000000; }},
+  {id:"onepunch100", cat:"⚔️ BATTLE",  rank:"bronze",   title:"一撃必殺",         desc:"ワンパン100回",              reward:3000,     check:function(g){ return (g.stats.onePunchCount||0)>=100; }},
+  {id:"onepunch1k",  cat:"⚔️ BATTLE",  rank:"silver",   title:"ワンパンマン",     desc:"ワンパン1,000回",            reward:200000,   check:function(g){ return (g.stats.onePunchCount||0)>=1000; }},
+  {id:"onepunch10k", cat:"⚔️ BATTLE",  rank:"gold",     title:"神の拳",           desc:"ワンパン10,000回",           reward:3000000,  check:function(g){ return (g.stats.onePunchCount||0)>=10000; }},
+  {id:"crit1k",      cat:"⚔️ BATTLE",  rank:"bronze",   title:"クリティカル使い", desc:"クリット1,000回",            reward:5000,     check:function(g){ return (g.stats.maxCritDmg||0)>0 && (g.stats.totalKills||0)>=500; }},
+  {id:"death10",     cat:"⚔️ BATTLE",  rank:"bronze",   title:"七転び八起き",     desc:"10回死亡",                   reward:10000,    check:function(g){ return (g.stats.totalDeaths||0)>=10; }},
+  {id:"death100",    cat:"⚔️ BATTLE",  rank:"silver",   title:"不死身",           desc:"100回死亡",                  reward:300000,   check:function(g){ return (g.stats.totalDeaths||0)>=100; }},
+  {id:"dmg1m",       cat:"⚔️ BATTLE",  rank:"silver",   title:"破壊神",           desc:"1回で100万ダメージ",         reward:500000,   check:function(g){ return (g.stats.maxDmg||0)>=1000000; }},
+  {id:"dmg1b",       cat:"⚔️ BATTLE",  rank:"gold",     title:"宇宙の破壊者",     desc:"1回で10億ダメージ",          reward:10000000, check:function(g){ return (g.stats.maxDmg||0)>=1000000000; }},
+
+  // ===== EXPLORER =====
+  {id:"floor5",      cat:"🗺️ EXPLORER", rank:"bronze",   title:"ダンジョン入門",   desc:"Floor5に到達",               reward:2000,     check:function(g){ return (g.maxFloor||1)>=5; }},
+  {id:"floor10",     cat:"🗺️ EXPLORER", rank:"bronze",   title:"中堅冒険者",       desc:"Floor10に到達",              reward:10000,    check:function(g){ return (g.maxFloor||1)>=10; }},
+  {id:"floor20",     cat:"🗺️ EXPLORER", rank:"silver",   title:"ダンジョン踏破",   desc:"全20フロア解放",             reward:200000,   check:function(g){ return (g.maxFloor||1)>=20; }},
+  {id:"clear100",    cat:"🗺️ EXPLORER", rank:"bronze",   title:"初踏破",           desc:"いずれかのフロアを100%達成", reward:5000,     check:function(g){ var k=Object.keys(g.floorProgress||{}); for(var i=0;i<k.length;i++) if((g.floorProgress[k[i]]||0)>=50) return true; return false; }},
+  {id:"clear500",    cat:"🗺️ EXPLORER", rank:"silver",   title:"猛者",             desc:"いずれかのフロアを500%達成", reward:300000,   check:function(g){ var k=Object.keys(g.floorProgress||{}); for(var i=0;i<k.length;i++) if((g.floorProgress[k[i]]||0)>=250) return true; return false; }},
+  {id:"clear1000",   cat:"🗺️ EXPLORER", rank:"silver",   title:"強化BOSS解放",     desc:"踏破率1000%達成",            reward:1000000,  check:function(g){ var k=Object.keys(g.floorProgress||{}); for(var i=0;i<k.length;i++) if((g.floorProgress[k[i]]||0)>=500) return true; return false; }},
+  {id:"clear10000",  cat:"🗺️ EXPLORER", rank:"gold",     title:"黄金神BOSS解放",   desc:"踏破率10000%達成",           reward:20000000, check:function(g){ var k=Object.keys(g.floorProgress||{}); for(var i=0;i<k.length;i++) if((g.floorProgress[k[i]]||0)>=5000) return true; return false; }},
+  {id:"danger5",     cat:"🗺️ EXPLORER", rank:"silver",   title:"危険地帯",         desc:"DANGER LEVEL 5",             reward:500000,   check:function(g){ return (g.dangerLevel||0)>=5; }},
+  {id:"danger10",    cat:"🗺️ EXPLORER", rank:"gold",     title:"死の領域",         desc:"DANGER LEVEL 10",            reward:5000000,  check:function(g){ return (g.dangerLevel||0)>=10; }},
+  {id:"danger50",    cat:"🗺️ EXPLORER", rank:"platinum", title:"狂気の冒険者",     desc:"DANGER LEVEL 50",            reward:100000000,check:function(g){ return (g.dangerLevel||0)>=50; }},
+  {id:"allfloor500", cat:"🗺️ EXPLORER", rank:"gold",     title:"真の踏破者",       desc:"全20フロアを500%以上達成",   reward:30000000, check:function(g){ for(var f=1;f<=20;f++) if((g.floorProgress[f]||0)<250) return false; return (g.maxFloor||1)>=20; }},
+
+  // ===== BOSS HUNTER =====
+  {id:"boss1st",     cat:"👑 BOSS",     rank:"bronze",   title:"初BOSS討伐",       desc:"BOSSを初めて倒す",           reward:10000,    check:function(g){ return (g.stats.bossKills||0)>=1; }},
+  {id:"boss100",     cat:"👑 BOSS",     rank:"silver",   title:"BOSS狩人",         desc:"BOSSを100体討伐",            reward:500000,   check:function(g){ return (g.stats.bossKills||0)>=100; }},
+  {id:"boss1k",      cat:"👑 BOSS",     rank:"gold",     title:"BOSS殺し",         desc:"BOSSを1,000体討伐",          reward:10000000, check:function(g){ return (g.stats.bossKills||0)>=1000; }},
+  {id:"boss_enh",    cat:"👑 BOSS",     rank:"silver",   title:"覇王討伐",         desc:"強化BOSSを初めて倒す",       reward:1000000,  check:function(g){ return (g.stats.bossEnhKills||0)>=1; }},
+  {id:"boss_gold",   cat:"👑 BOSS",     rank:"gold",     title:"黄金神討伐",       desc:"黄金神BOSSを初めて倒す",     reward:10000000, check:function(g){ return (g.stats.bossGoldKills||0)>=1; }},
+  {id:"boss_gold10", cat:"👑 BOSS",     rank:"platinum", title:"黄金神殺し",       desc:"黄金神BOSSを10体討伐",       reward:100000000,check:function(g){ return (g.stats.bossGoldKills||0)>=10; }},
+  {id:"boss_all",    cat:"👑 BOSS",     rank:"gold",     title:"全BOSS制覇",       desc:"全20フロアのBOSSを討伐",     reward:20000000, check:function(g){ var bc=g.stats.bossFloorKills||{}; for(var f=1;f<=20;f++) if(!(bc[f])) return false; return true; }},
+
+  // ===== COLLECTOR =====
+  {id:"equip_leg",   cat:"💎 COLLECTOR",rank:"bronze",   title:"レジェンダリー入手",desc:"Legendaryアイテムを入手",   reward:20000,    check:function(g){ return (g.stats.legendaryCount||0)>=1; }},
+  {id:"equip_set",   cat:"💎 COLLECTOR",rank:"silver",   title:"セット装備入手",   desc:"セット装備を初入手",         reward:100000,   check:function(g){ return (g.stats.setCount||0)>=1; }},
+  {id:"equip_set6",  cat:"💎 COLLECTOR",rank:"gold",     title:"全セット制覇",     desc:"6種のセット装備を全て入手",  reward:10000000, check:function(g){ return (g.stats.setTypes||0)>=6; }},
+  {id:"equip_ilv20", cat:"💎 COLLECTOR",rank:"silver",   title:"至高の装備",       desc:"iLv20の装備を入手",          reward:500000,   check:function(g){ return (g.stats.maxIlv||0)>=20; }},
+  {id:"equip_full",  cat:"💎 COLLECTOR",rank:"gold",     title:"完全武装",         desc:"全スロットをLegendary装備",  reward:15000000, check:function(g){ var slots=["rhand","lhand","armor","helm","ring","boots","amulet"]; for(var i=0;i<slots.length;i++){var e=g.equip[slots[i]]; if(!e||e.rarity!=="legendary") return false;} return true; }},
+  {id:"drop1k",      cat:"💎 COLLECTOR",rank:"bronze",   title:"収集家",           desc:"アイテムを1,000個入手",      reward:10000,    check:function(g){ return (g.stats.totalDrops||0)>=1000; }},
+  {id:"drop100k",    cat:"💎 COLLECTOR",rank:"gold",     title:"蒐集王",           desc:"アイテムを100,000個入手",    reward:8000000,  check:function(g){ return (g.stats.totalDrops||0)>=100000; }},
+
+  // ===== SKILL MASTER =====
+  {id:"skill1st",    cat:"🔮 SKILL",    rank:"bronze",   title:"スキル入門",       desc:"スキルを初めて習得",         reward:3000,     check:function(g){ var k=Object.keys(g.skills||{}); for(var i=0;i<k.length;i++) if((g.skills[k[i]]||0)>0) return true; return false; }},
+  {id:"skill_all",   cat:"🔮 SKILL",    rank:"gold",     title:"スキルマスター",   desc:"全スキルを習得",             reward:10000000, check:function(g){ var k=Object.keys(g.skills||{}); var cnt=0; for(var i=0;i<k.length;i++) if((g.skills[k[i]]||0)>0) cnt++; return cnt>=32; }},
+  {id:"tech1st",     cat:"🔮 SKILL",    rank:"bronze",   title:"技入門",           desc:"技を初めて習得",             reward:3000,     check:function(g){ var k=Object.keys(g.techs||{}); for(var i=0;i<k.length;i++) if((g.techs[k[i]]||0)>0) return true; return false; }},
+  {id:"tech_ult",    cat:"🔮 SKILL",    rank:"silver",   title:"必殺技解放",       desc:"必殺技を初めて習得",         reward:200000,   check:function(g){ var ts=g.techs||{}; var ulti=["oblivion","ragnarok","glacial","godthunder","soulstorm","bigbang"]; for(var i=0;i<ulti.length;i++) if((ts[ulti[i]]||0)>0) return true; return false; }},
+  {id:"tech_all",    cat:"🔮 SKILL",    rank:"platinum", title:"技の極み",         desc:"全技を習得",                 reward:50000000, check:function(g){ var k=Object.keys(g.techs||{}); var cnt=0; for(var i=0;i<k.length;i++) if((g.techs[k[i]]||0)>0) cnt++; return cnt>=37; }},
+  {id:"tp_max",      cat:"🔮 SKILL",    rank:"silver",   title:"TP上限解放",       desc:"TP上限を最大まで上げる",     reward:300000,   check:function(g){ return g.player.lv>=20; }},
+
+  // ===== WEALTHY =====
+  {id:"gold10k",     cat:"💰 WEALTHY",  rank:"bronze",   title:"小金持ち",         desc:"10,000G所持",                reward:5000,     check:function(g){ return (g.gold||0)>=10000; }},
+  {id:"gold100k",    cat:"💰 WEALTHY",  rank:"bronze",   title:"富裕層",           desc:"100,000G所持",               reward:50000,    check:function(g){ return (g.gold||0)>=100000; }},
+  {id:"gold1m",      cat:"💰 WEALTHY",  rank:"silver",   title:"大富豪",           desc:"1,000,000G所持",             reward:500000,   check:function(g){ return (g.gold||0)>=1000000; }},
+  {id:"gold10m",     cat:"💰 WEALTHY",  rank:"silver",   title:"黄金王",           desc:"10,000,000G所持",            reward:5000000,  check:function(g){ return (g.gold||0)>=10000000; }},
+  {id:"gold100m",    cat:"💰 WEALTHY",  rank:"gold",     title:"財神",             desc:"100,000,000G所持",           reward:30000000, check:function(g){ return (g.gold||0)>=100000000; }},
+  {id:"earn1b",      cat:"💰 WEALTHY",  rank:"gold",     title:"累計億万長者",     desc:"累計ゴールド獲得10億G",      reward:50000000, check:function(g){ return (g.stats.totalGold||0)>=1000000000; }},
+  {id:"earn10b",     cat:"💰 WEALTHY",  rank:"platinum", title:"経済の神",         desc:"累計ゴールド獲得100億G",     reward:500000000,check:function(g){ return (g.stats.totalGold||0)>=10000000000; }},
+
+  // ===== STATS =====
+  {id:"lv10",        cat:"📊 STATS",    rank:"bronze",   title:"成長の証",         desc:"Lv10達成",                   reward:5000,     check:function(g){ return g.player.lv>=10; }},
+  {id:"lv30",        cat:"📊 STATS",    rank:"silver",   title:"熟練冒険者",       desc:"Lv30達成",                   reward:200000,   check:function(g){ return g.player.lv>=30; }},
+  {id:"lv50",        cat:"📊 STATS",    rank:"silver",   title:"レベルカンスト",   desc:"Lv50達成",                   reward:1000000,  check:function(g){ return g.player.lv>=50; }},
+  {id:"lv100",       cat:"📊 STATS",    rank:"gold",     title:"超越者",           desc:"Lv100達成",                  reward:10000000, check:function(g){ return g.player.lv>=100; }},
+  {id:"play1h",      cat:"📊 STATS",    rank:"bronze",   title:"入門者",           desc:"プレイ時間1時間",            reward:5000,     check:function(g){ return ((g.stats.playTime||0))>=3600; }},
+  {id:"play10h",     cat:"📊 STATS",    rank:"silver",   title:"廃人一歩手前",     desc:"プレイ時間10時間",           reward:300000,   check:function(g){ return ((g.stats.playTime||0))>=36000; }},
+  {id:"play100h",    cat:"📊 STATS",    rank:"gold",     title:"本物の廃人",       desc:"プレイ時間100時間",          reward:10000000, check:function(g){ return ((g.stats.playTime||0))>=360000; }},
+  {id:"rarevar",     cat:"📊 STATS",    rank:"silver",   title:"レア収集家",       desc:"色違い・レアを50体討伐",     reward:500000,   check:function(g){ var s=g.stats||{}; var t=(s.goldRareKills||0); var vk=s.variantKills||{}; var vkeys=Object.keys(vk); for(var i=0;i<vkeys.length;i++) t+=vk[vkeys[i]]; return t>=50; }},
+  {id:"alltype",     cat:"📊 STATS",    rank:"silver",   title:"博識",             desc:"全種族の敵を討伐",           reward:300000,   check:function(g){ var types=["goblin","beast","undead","demon","dragon","spirit","construct"]; var killed=g.stats.enemyKills||{}; var names=Object.keys(killed); for(var t=0;t<types.length;t++){var found=false; for(var n=0;n<names.length;n++){for(var ei=0;ei<ENEMIES.length;ei++){if(ENEMIES[ei].name===names[n]&&ENEMIES[ei].type===types[t]){found=true;break;}}} if(!found) return false;} return true; }}
+];
+
+var ACH_RANK_COLOR = {bronze:"#cd7f32", silver:"#c0c0c0", gold:"#ffd60a", platinum:"#e0c8ff"};
+var ACH_RANK_LABEL = {bronze:"🥉 BRONZE", silver:"🥈 SILVER", gold:"🥇 GOLD", platinum:"💎 PLATINUM"};
 var MAX_FLOORS = 20;
+
+// BOSS定義（フロアごと）
+// reqCycles: 出現に必要な踏破周回数
+// hpMult/atkMult: 通常敵の倍率
+var BOSS_CONFIG = [
+  {floor:1,  name:"ゴブリンキング",    icon:"👑", type:"goblin",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:2,  name:"闇コウモリ王",      icon:"🦇", type:"beast",     hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:3,  name:"スケルトンロード",  icon:"💀", type:"undead",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:4,  name:"オークウォーロード",icon:"👺", type:"goblin",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:5,  name:"ゾンビキング",      icon:"🧟", type:"undead",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:6,  name:"大悪魔",            icon:"😈", type:"demon",     hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:7,  name:"死霊王リッチ",      icon:"🧙", type:"undead",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:8,  name:"古代バジリスク",    icon:"🐍", type:"beast",     hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:9,  name:"竜王",              icon:"🐉", type:"dragon",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:10, name:"フェニックス神",    icon:"🔥", type:"spirit",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:11, name:"双頭ワイバーン",    icon:"🦕", type:"dragon",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:12, name:"始祖龍",            icon:"🐲", type:"dragon",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:13, name:"冥界大魔王",        icon:"👿", type:"demon",     hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:14, name:"虚無の精霊王",      icon:"👁️", type:"spirit",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:15, name:"鋼鉄タイタン",      icon:"🗿", type:"construct", hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:16, name:"深淵神",            icon:"🌑", type:"demon",     hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:17, name:"時空龍",            icon:"🌀", type:"dragon",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:18, name:"天地龍",            icon:"⭐", type:"dragon",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:19, name:"混沌の支配者",      icon:"🌌", type:"demon",     hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"},
+  {floor:20, name:"創世神竜",          icon:"🔱", type:"dragon",    hpMult:8,  atkMult:3, goldMult:30, expMult:10, color:"#ff6a00"}
+];
+// 強化BOSS（踏破率1000%〜）
+var BOSS_ENHANCED_MULT = {hpMult:2.5, atkMult:2.0, goldMult:3, expMult:2, color:"#ff00ff", prefix:"覇王・"};
+// 黄金BOSS（踏破率10000%〜）
+var BOSS_GOLD_MULT    = {hpMult:5,   atkMult:3.0, goldMult:10, expMult:4, color:"#ffd60a", prefix:"黄金神・", filter:"brightness(2.5) sepia(1) saturate(4) hue-rotate(10deg) drop-shadow(0 0 20px #ffd60a)"};
+
+// BOSS出現チェック：何のBOSSを出すか返す（null=通常戦闘）
+// tier: 1=通常BOSS 2=強化BOSS 3=黄金BOSS
+function checkBossSpawn(cycles, isJustCleared){
+  var boss = null;
+  for(var i=0;i<BOSS_CONFIG.length;i++){
+    if(BOSS_CONFIG[i].floor===G.floor){ boss=BOSS_CONFIG[i]; break; }
+  }
+  if(!boss) return null;
+
+  // 黄金BOSS（踏破率10000%=200周）
+  if(cycles>=200){
+    if(isJustCleared && cycles===200) return {boss:boss, tier:3};
+    if(Math.random()<0.003) return {boss:boss, tier:3};
+  }
+  // 強化BOSS（踏破率1000%=20周）
+  if(cycles>=20){
+    if(isJustCleared && cycles===20) return {boss:boss, tier:2};
+    if(Math.random()<0.01) return {boss:boss, tier:2};
+  }
+  // 通常BOSS（踏破率100%=1周）
+  if(cycles>=1){
+    if(isJustCleared && cycles===1) return {boss:boss, tier:1};
+    if(Math.random()<0.03) return {boss:boss, tier:1};
+  }
+  return null;
+}
 
 var ENEMIES = [
   {name:"ゴブリン",    icon:"👹",hp:40,   atk:6,   exp:20,  gold:5,   floor:1,  type:"goblin"},
@@ -647,17 +801,17 @@ var ENEMIES = [
 
 // 色違い・レアモンスター定義
 var ENEMY_VARIANTS = [
-  {reqCycles:1,  chance:0.020, tier:1, id:"silver",  prefix:"銀色の",  color:"#c0c0c0", filter:"brightness(1.8) grayscale(0.3)",                                               hpMult:1.5, atkMult:1.5, goldMult:6,  dropBonus:0.15, expMult:2},
-  {reqCycles:2,  chance:0.015, tier:1, id:"blue",    prefix:"蒼き",    color:"#4a9fff", filter:"brightness(1.5) hue-rotate(180deg)",                                            hpMult:2,   atkMult:2,   goldMult:8,  dropBonus:0.20, expMult:2.5},
-  {reqCycles:3,  chance:0.010, tier:1, id:"red",     prefix:"紅の",    color:"#ff4444", filter:"brightness(1.5) hue-rotate(320deg)",                                            hpMult:2.5, atkMult:2.5, goldMult:12, dropBonus:0.25, expMult:3},
-  {reqCycles:4,  chance:0.008, tier:1, id:"purple",  prefix:"紫煙の",  color:"#9b5de5", filter:"brightness(1.5) hue-rotate(270deg)",                                            hpMult:3,   atkMult:3,   goldMult:18, dropBonus:0.30, expMult:3.5},
-  {reqCycles:5,  chance:0.005, tier:1, id:"black",   prefix:"漆黒の",  color:"#ff00aa", filter:"brightness(0.6) contrast(2) hue-rotate(290deg)",                                hpMult:3.5, atkMult:3.5, goldMult:25, dropBonus:0.35, expMult:4},
-  {reqCycles:10, chance:0.003, tier:2, id:"silver2", prefix:"輝銀の",  color:"#e8e8ff", filter:"brightness(2.2) grayscale(0.1) drop-shadow(0 0 6px #aaaaff)",                   hpMult:4,   atkMult:4,   goldMult:40, dropBonus:0.40, expMult:5},
-  {reqCycles:10, chance:0.003, tier:2, id:"blue2",   prefix:"蒼炎の",  color:"#00d4ff", filter:"brightness(2.0) hue-rotate(180deg) drop-shadow(0 0 8px #00aaff)",               hpMult:4.5, atkMult:4.5, goldMult:50, dropBonus:0.45, expMult:5.5},
-  {reqCycles:10, chance:0.003, tier:2, id:"red2",    prefix:"業火の",  color:"#ff8800", filter:"brightness(2.0) hue-rotate(340deg) drop-shadow(0 0 8px #ff4400)",               hpMult:5,   atkMult:5,   goldMult:60, dropBonus:0.50, expMult:6},
-  {reqCycles:10, chance:0.003, tier:2, id:"purple2", prefix:"虚空の",  color:"#dd88ff", filter:"brightness(2.0) hue-rotate(270deg) drop-shadow(0 0 8px #aa00ff)",               hpMult:5.5, atkMult:5.5, goldMult:70, dropBonus:0.55, expMult:6.5},
-  {reqCycles:10, chance:0.003, tier:2, id:"black2",  prefix:"深淵の",  color:"#ff44cc", filter:"brightness(0.4) contrast(3) hue-rotate(290deg) drop-shadow(0 0 10px #ff00aa)",  hpMult:6,   atkMult:6,   goldMult:80, dropBonus:0.60, expMult:7},
-  {reqCycles:1,  chance:0.003, tier:3, id:"gold",    prefix:"黄金の",  color:"#ffd60a", filter:"brightness(2.5) sepia(1) saturate(4) hue-rotate(10deg) drop-shadow(0 0 12px #ffd60a)", hpMult:3, atkMult:3, goldMult:100, dropBonus:0.8, expMult:5, isRare:true}
+  {reqCycles:1,  chance:0.020, tier:1, id:"silver",  prefix:"銀色の",  color:"#c0c0c0", filter:"brightness(1.8) grayscale(0.3)",                                               hpMult:1.5, atkMult:1.5, goldMult:10,  dropBonus:0.25, expMult:3},
+  {reqCycles:2,  chance:0.015, tier:1, id:"blue",    prefix:"蒼き",    color:"#4a9fff", filter:"brightness(1.5) hue-rotate(180deg)",                                            hpMult:2,   atkMult:2,   goldMult:15,  dropBonus:0.30, expMult:3.5},
+  {reqCycles:3,  chance:0.010, tier:1, id:"red",     prefix:"紅の",    color:"#ff4444", filter:"brightness(1.5) hue-rotate(320deg)",                                            hpMult:2.5, atkMult:2.5, goldMult:22,  dropBonus:0.35, expMult:4},
+  {reqCycles:4,  chance:0.008, tier:1, id:"purple",  prefix:"紫煙の",  color:"#9b5de5", filter:"brightness(1.5) hue-rotate(270deg)",                                            hpMult:3,   atkMult:3,   goldMult:32,  dropBonus:0.40, expMult:4.5},
+  {reqCycles:5,  chance:0.005, tier:1, id:"black",   prefix:"漆黒の",  color:"#ff00aa", filter:"brightness(0.6) contrast(2) hue-rotate(290deg)",                                hpMult:3.5, atkMult:3.5, goldMult:45,  dropBonus:0.50, expMult:5},
+  {reqCycles:10, chance:0.003, tier:2, id:"silver2", prefix:"輝銀の",  color:"#e8e8ff", filter:"brightness(2.2) grayscale(0.1) drop-shadow(0 0 6px #aaaaff)",                   hpMult:4,   atkMult:4,   goldMult:80,  dropBonus:0.60, expMult:6},
+  {reqCycles:10, chance:0.003, tier:2, id:"blue2",   prefix:"蒼炎の",  color:"#00d4ff", filter:"brightness(2.0) hue-rotate(180deg) drop-shadow(0 0 8px #00aaff)",               hpMult:4.5, atkMult:4.5, goldMult:100, dropBonus:0.65, expMult:6.5},
+  {reqCycles:10, chance:0.003, tier:2, id:"red2",    prefix:"業火の",  color:"#ff8800", filter:"brightness(2.0) hue-rotate(340deg) drop-shadow(0 0 8px #ff4400)",               hpMult:5,   atkMult:5,   goldMult:120, dropBonus:0.70, expMult:7},
+  {reqCycles:10, chance:0.003, tier:2, id:"purple2", prefix:"虚空の",  color:"#dd88ff", filter:"brightness(2.0) hue-rotate(270deg) drop-shadow(0 0 8px #aa00ff)",               hpMult:5.5, atkMult:5.5, goldMult:150, dropBonus:0.75, expMult:7.5},
+  {reqCycles:10, chance:0.003, tier:2, id:"black2",  prefix:"深淵の",  color:"#ff44cc", filter:"brightness(0.4) contrast(3) hue-rotate(290deg) drop-shadow(0 0 10px #ff00aa)",  hpMult:6,   atkMult:6,   goldMult:200, dropBonus:0.80, expMult:8},
+  {reqCycles:1,  chance:0.003, tier:3, id:"gold",    prefix:"黄金の",  color:"#ffd60a", filter:"brightness(2.5) sepia(1) saturate(4) hue-rotate(10deg) drop-shadow(0 0 12px #ffd60a)", hpMult:3, atkMult:3, goldMult:500, dropBonus:1.0, expMult:8, isRare:true}
 ];
 
 var ITEM_BASE = {
@@ -1116,6 +1270,8 @@ var G = {
   floorProgress:{},
   firstCleared:{},
   dangerLevel:0,
+  achievements:{},     // {achId: true} 達成フラグ
+  achClaimed:{},       // {achId: true} 報酬受取済み
   enemy:null,
   enemyBuffs:{},      // 敵への付与効果 {buffId: remainTurns}
   playerBuffs:{},     // プレイヤーへの付与効果 {buffId: remainTurns}
@@ -1134,7 +1290,15 @@ var G = {
     enemyKills:{},
     totalDrops:0,
     playTime:0,
-    sessionStart:Date.now()
+    sessionStart:Date.now(),
+    bossKills:0,
+    bossEnhKills:0,
+    bossGoldKills:0,
+    bossFloorKills:{},
+    legendaryCount:0,
+    setCount:0,
+    setTypes:0,
+    maxIlv:0
   }
 };
 
@@ -1465,6 +1629,39 @@ function getSellValue(item){
   return Math.floor((SELL_BASE[item.rarity]||5) * (1+(((item.ilv||1)-1)*0.1)));
 }
 
+// まとめて売却（未ロック・ポーション除く）
+// threshold: 'common'/'magic'/'rare'/'all'
+function quickSell(threshold){
+  var newInv = [];
+  var gold = 0;
+  var count = 0;
+  var order = ["common","magic","rare","legendary"];
+  var maxIdx = threshold==="all" ? 999 : order.indexOf(threshold);
+  for(var i=0;i<G.inventory.length;i++){
+    var it = G.inventory[i];
+    if(!it){ continue; }
+    var doSell = false;
+    if(!it.locked && it.rarity!=="set" && it.rarity!=="potion"){
+      if(threshold==="all") doSell = true;
+      else if(order.indexOf(it.rarity)<=maxIdx) doSell = true;
+    }
+    if(doSell){ gold+=getSellValue(it); count++; }
+    else newInv.push(it);
+  }
+  if(count===0){ showToast("売却対象がありません"); return; }
+  G.inventory = newInv;
+  G.gold += gold;
+  addLog("&#128260; <span class='log-gold'>"+count+"個を売却 +"+gold.toLocaleString()+"G</span>");
+  updateInventoryUI(); updateGoldUI();
+  showToast(count+"個売却 +"+gold.toLocaleString()+"G！");
+  sfxBuy();
+}
+
+// 自動売却（インベントリ満杯時）
+function autoSell(){
+  quickSell('common');
+}
+
 function rollAffix(floor){
   // フロアによって初期グレードの重みを変える
   // Floor1-3: 小多め / Floor4-6: 中中心 / Floor7-9: 大中心 / Floor10: 特大あり
@@ -1541,25 +1738,59 @@ function spawnEnemy(){
   var base = pool[Math.floor(Math.random()*pool.length)];
   var dl = G.dangerLevel||0;
   var scale = (1 + (G.floor-1)*0.5) * (1 + dl*0.3);
+  var cycles = Math.floor((G.floorProgress[G.floor]||0) / KILLS_TO_CLEAR);
+
+  // BOSS出現チェック（色違いより優先）
+  var bossResult = checkBossSpawn(cycles, G._justClearedCycles === cycles);
+  G._justClearedCycles = null;
+
+  if(bossResult){
+    var bc = bossResult.boss;
+    var tier = bossResult.tier;
+    var bm = tier===3 ? BOSS_GOLD_MULT : tier===2 ? BOSS_ENHANCED_MULT : {hpMult:1,atkMult:1,goldMult:1,expMult:1,color:bc.color,prefix:""};
+    var totalHp   = Math.floor(base.hp  * scale * bc.hpMult  * bm.hpMult);
+    var totalAtk  = Math.floor(base.atk * scale * bc.atkMult * bm.atkMult);
+    var bossName  = (bm.prefix||"") + bc.name;
+    G.enemy = {
+      name:    bossName,
+      icon:    bc.icon,
+      hp:      totalHp,
+      maxHp:   totalHp,
+      atk:     totalAtk,
+      exp:     Math.floor(base.exp * scale * bc.expMult * bm.expMult),
+      gold:    Math.floor((base.gold||0) * scale * bc.goldMult * bm.goldMult),
+      variant: null,
+      etype:   bc.type||"none",
+      isBoss:  true,
+      bossTier: tier,
+      bossColor: tier===3?"#ffd60a":tier===2?"#ff00ff":bc.color,
+      bossFilter: tier===3 ? BOSS_GOLD_MULT.filter : (tier===2?"brightness(1.5) hue-rotate(280deg) drop-shadow(0 0 12px #ff00ff)":"drop-shadow(0 0 12px "+bc.color+")")
+    };
+    if(!G.enemyBuffs) G.enemyBuffs={};
+    G.enemyBuffs = {};
+    G._techQueue = null;
+    // BOSS出現演出
+    sfxGoldRare();
+    addLog("<span style='color:"+G.enemy.bossColor+";font-size:14px'>⚠️ BOSS出現！ "+bossName+"</span>");
+    updateEnemyUI();
+    return;
+  }
 
   // バリアント抽選（踏破率に応じて段階的に解放）
   var variant = null;
-  var cycles = Math.floor((G.floorProgress[G.floor]||0) / KILLS_TO_CLEAR);
   if(cycles >= 1){
     var roll = Math.random();
-    // ゴールドレア（tier:3）を先に判定
     var goldV = null;
     for(var i=0;i<ENEMY_VARIANTS.length;i++) if(ENEMY_VARIANTS[i].tier===3) goldV=ENEMY_VARIANTS[i];
     if(goldV && cycles >= goldV.reqCycles && roll < goldV.chance){
       variant = goldV;
     } else {
-      // 解放済みの色違いを全て抽選プールに入れる
       var roll2 = Math.random();
       var cumul = 0;
       for(var i=0;i<ENEMY_VARIANTS.length;i++){
         var v = ENEMY_VARIANTS[i];
-        if(v.tier===3) continue; // ゴールドレアは別判定
-        if(cycles < v.reqCycles) continue; // 踏破率未達
+        if(v.tier===3) continue;
+        if(cycles < v.reqCycles) continue;
         cumul += v.chance;
         if(roll2 < cumul){ variant=v; break; }
       }
@@ -1579,12 +1810,12 @@ function spawnEnemy(){
     exp:     Math.floor(base.exp * scale * (variant ? variant.expMult : 1)),
     gold:    Math.floor((base.gold||0) * scale * goldMult),
     variant: variant || null,
-    etype:   base.type || "none"
+    etype:   base.type || "none",
+    isBoss:  false
   };
-  // 新しい敵が出現したらTP回復・バフリセット・技を発動待ちにセット
   if(!G.enemyBuffs) G.enemyBuffs={};
   G.enemyBuffs = {};
-  G._techQueue = null; // 技キュー（次のdoBattleで初期化）
+  G._techQueue = null;
   updateEnemyUI();
 }
 
@@ -1711,9 +1942,9 @@ function doBattle(){
     var bsk = findSkill(bid);
     if(bsk && bsk.type==="unique_blood" && (G.skills[bid]||0)>0) G.player.hp = Math.max(1, G.player.hp-1);
   }
-  // 混沌セット4件HP吸収
+  // 混沌セット4件HP吸収（5%）
   if((sc.konton||0)>=4){
-    var heal = Math.floor(dmg*0.15);
+    var heal = Math.floor(dmg*0.05);
     if(heal>0 && G.player.hp<G.player.maxHp){ G.player.hp=Math.min(G.player.maxHp,G.player.hp+heal); showDmgNum(heal,false,false,false,true); }
   }
   // 技のHP吸収（drain系）
@@ -1729,11 +1960,13 @@ function doBattle(){
   if(isCrit && dmg > G.stats.maxCritDmg) G.stats.maxCritDmg = dmg;
   if(isOnePunch) G.stats.onePunchCount = (G.stats.onePunchCount||0)+1;
 
-  showDmgNum(dmg, isCrit, isOnePunch, false, false);
+  var isWeak   = techResult && (techResult.elemMult||1) > 1.0;
+  var isResist = techResult && (techResult.elemMult||1) < 1.0;
+  showDmgNum(dmg, isCrit, isOnePunch, false, false, isWeak && !isOnePunch && !isCrit, isResist);
   if(isOnePunch) sfxOnePunch();
   else if(isCrit) sfxCrit();
+  else if(isWeak){ sfxCrit(); playTone(0,"sine",0.08,0.15,880,1320); }
   else sfxAttack();
-
   var ei = document.getElementById("enemyIcon");
   ei.classList.add("hit");
   setTimeout(function(){ ei.classList.remove("hit"); }, 150);
@@ -1791,7 +2024,7 @@ function executeTech(tech, s){
   var lv = G.techs[tech.id]||1;
   var etype = G.enemy ? (G.enemy.etype||"none") : "none";
   var elemMult = getElemMult(tech.elem, etype);
-  var result = {name:tech.name, elem:tech.elem, isCrit:false, drain:0, dmg:0};
+  var result = {name:tech.name, elem:tech.elem, isCrit:false, drain:0, dmg:0, elemMult:elemMult};
 
   if(tech.type==="buff"){
     var turns = 10;
@@ -1858,10 +2091,10 @@ function executeTech(tech, s){
   if(Math.random()*100 < critRate){ dmg = Math.floor(dmg*2); result.isCrit=true; }
 
   // HP吸収
-  if(tech.id==="souleater")     result.drain = 0.30;
-  if(tech.id==="drain")         result.drain = 0.50;
-  if(tech.id==="deathembrace")  result.drain = 0.70;
-  if(tech.id==="soulstorm")     result.drain = 1.00;
+  if(tech.id==="souleater")     result.drain = 0.10;
+  if(tech.id==="drain")         result.drain = 0.18;
+  if(tech.id==="deathembrace")  result.drain = 0.25;
+  if(tech.id==="soulstorm")     result.drain = 0.40;
 
   result.dmg = Math.max(1, dmg);
   return result;
@@ -1922,6 +2155,21 @@ function onEnemyDead(isCrit, isOnePunch){
     dropItemRare();
     sfxGoldRare();
     addLog("<span style='color:#ffd60a'>&#9733; " + G.enemy.name + "</span> を倒した！ <span style='color:#ffd60a'>RARE DROP!</span>");
+  } else if(G.enemy.isBoss){
+    var tier = G.enemy.bossTier||1;
+    sfxFloorClear();
+    if(tier>=2) sfxLevelUp();
+    dropItemRare();
+    if(tier>=2) dropItemRare();
+    if(tier>=3){ dropItemRare(); levelUpFlash(); }
+    // BOSS統計記録
+    G.stats.bossKills = (G.stats.bossKills||0)+1;
+    if(tier>=3) G.stats.bossGoldKills = (G.stats.bossGoldKills||0)+1;
+    else if(tier>=2) G.stats.bossEnhKills = (G.stats.bossEnhKills||0)+1;
+    if(!G.stats.bossFloorKills) G.stats.bossFloorKills={};
+    G.stats.bossFloorKills[G.floor] = true;
+    var bossLabel = tier===3?"&#127950;黄金神BOSS":tier===2?"&#128161;強化BOSS":"&#9876;BOSS";
+    addLog("<span style='color:"+G.enemy.bossColor+"'>"+bossLabel+" 【"+G.enemy.name+"】討伐！</span>");
   } else {
     addLog("<span class='log-gold'>" + (v?"<span style='color:"+v.color+"'>":"") + G.enemy.name + (v?"</span>":"") + "</span> を倒した！" + (isOnePunch ? " <span style='color:#ff2222'>ONE PUNCH!!</span>" : ""));
   }
@@ -1933,6 +2181,7 @@ function onEnemyDead(isCrit, isOnePunch){
   var prevCycle = Math.floor((kills-addKills)/KILLS_TO_CLEAR);
 
   if(cycle > prevCycle){
+    G._justClearedCycles = cycle; // BOSS出現フラグ
     // 初回踏破（cycle===1）
     if(cycle===1){
       if(!G.firstCleared) G.firstCleared={};
@@ -2268,8 +2517,6 @@ function dropItem(ilv){
     }
   }
   if(!item) item = generateItem(slot, floor, null);
-
-  if(G.inventory.length>=64) autoSell();
   if(G.inventory.length>=64){
     var idx = -1;
     for(var i=0;i<G.inventory.length;i++) if(!G.inventory[i].locked){ idx=i; break; }
@@ -2277,7 +2524,18 @@ function dropItem(ilv){
     else { showToast("インベントリ満杯"); return; }
   }
   G.inventory.push(item);
-  if(G.stats) G.stats.totalDrops = (G.stats.totalDrops||0)+1;
+  if(G.stats){
+    G.stats.totalDrops = (G.stats.totalDrops||0)+1;
+    if(item.rarity==="legendary") G.stats.legendaryCount = (G.stats.legendaryCount||0)+1;
+    if(item.rarity==="set"){
+      G.stats.setCount = (G.stats.setCount||0)+1;
+      // セット種類数を記録
+      if(!G.stats._setTypes) G.stats._setTypes={};
+      if(item.setId) G.stats._setTypes[item.setId]=true;
+      G.stats.setTypes = Object.keys(G.stats._setTypes||{}).length;
+    }
+    if((item.ilv||1)>(G.stats.maxIlv||0)) G.stats.maxIlv = item.ilv||1;
+  }
   sfxDrop();
   var onePunchTag = (ilv && ilv > G.floor) ? " <span style='color:#ff2222'>ONE PUNCH BONUS!</span>" : "";
   addLog("&#128142; <span style='color:"+RARITY_COLOR[item.rarity]+"'>"+item.name+"</span>【iLv"+item.ilv+"】をドロップ！"+onePunchTag);
@@ -2305,7 +2563,6 @@ function dropItemRare(){
     spd:base.spd, crit:base.crit, hp:Math.floor((base.hp||0)*ilvScale),
     affixes:affixes, locked:false
   };
-  if(G.inventory.length>=64) autoSell();
   if(G.inventory.length>=64){
     var idx=-1;
     for(var i=0;i<G.inventory.length;i++) if(!G.inventory[i].locked){idx=i;break;}
@@ -2316,25 +2573,10 @@ function dropItemRare(){
   updateInventoryUI(); updateGoldUI();
 }
 
-function autoSell(){
-  var threshold = document.getElementById("autosellThreshold").value;
-  if(threshold==="none") return;
-  var threshIdx = RARITY_ORDER.indexOf(threshold);
-  var toSell = [];
-  for(var i=0;i<G.inventory.length;i++){
-    var it = G.inventory[i];
-    if(!it.locked && it.rarity!=="set" && RARITY_ORDER.indexOf(it.rarity)<=threshIdx) toSell.push(it);
-  }
-  if(!toSell.length) return;
-  var gold = 0;
-  for(var i=0;i<toSell.length;i++){
-    var idx = G.inventory.indexOf(toSell[i]);
-    if(idx>=0){ G.inventory.splice(idx,1); gold+=getSellValue(toSell[i]); }
-  }
-  G.gold += gold;
-  addLog("&#128260; <span class='log-gold'>"+toSell.length+"個を自動売却 +"+gold+"G</span>");
-  updateInventoryUI(); updateGoldUI();
-}
+// 共通売却処理
+// rarityThresh: "none"/"common"/"magic"/"rare"/"legendary"
+// maxIlv: 0=制限なし
+// unlockOnly: trueなら条件無視で未ロック全部
 
 // ============================================================
 // SHOP
@@ -2669,10 +2911,10 @@ function removeSlot(idx){
 // ============================================================
 // DAMAGE NUMBERS
 // ============================================================
-function showDmgNum(dmg, isCrit, isOnePunch, isEnemy, isHeal){
+function showDmgNum(dmg, isCrit, isOnePunch, isEnemy, isHeal, isWeak, isResist){
   var c = document.getElementById("dmgContainer");
   var el = document.createElement("div");
-  var cls = isHeal?"dmg-heal":isEnemy?"dmg-enemy":isOnePunch?"dmg-onepunch":isCrit?"dmg-crit":"dmg-normal";
+  var cls = isHeal?"dmg-heal":isEnemy?"dmg-enemy":isOnePunch?"dmg-onepunch":isCrit?"dmg-crit":isWeak?"dmg-weak":"dmg-normal";
   el.className = "dmg-num " + cls;
   var rect = document.getElementById("battleArea").getBoundingClientRect();
   el.style.left = (rect.left + (isEnemy?60+Math.random()*60:30+Math.random()*120)) + "px";
@@ -2680,6 +2922,8 @@ function showDmgNum(dmg, isCrit, isOnePunch, isEnemy, isHeal){
   if(isHeal) el.textContent = "+" + dmg + " HP";
   else if(isOnePunch) el.textContent = "ONE PUNCH!! " + dmg;
   else if(isCrit) el.textContent = dmg + " CRIT!";
+  else if(isWeak) el.textContent = dmg + " WEAK!!";
+  else if(isResist) el.textContent = dmg + " RESIST";
   else if(isEnemy) el.textContent = "-" + dmg;
   else el.textContent = String(dmg);
   c.appendChild(el);
@@ -2713,16 +2957,36 @@ function updateEnemyUI(){
   var nameEl = document.getElementById("enemyName");
   var iconEl = document.getElementById("enemyIcon");
   iconEl.textContent = G.enemy.icon;
-  iconEl.style.filter = v ? v.filter : "drop-shadow(0 0 8px #ff000044)";
+  iconEl.style.filter = G.enemy.isBoss ? G.enemy.bossFilter : (v ? v.filter : "drop-shadow(0 0 8px #ff000044)");
   nameEl.textContent = G.enemy.name;
-  nameEl.style.color = v ? v.color : "";
+  nameEl.style.color = G.enemy.isBoss ? G.enemy.bossColor : (v ? v.color : "");
+
+  // 属性バッジ表示
+  var attrsEl = document.getElementById("enemyAttrs");
+  if(attrsEl){
+    var etype = G.enemy.etype||"none";
+    var table = ELEM_WEAKNESS[etype];
+    var html = "";
+    if(table){
+      var ELEM_ICON = {fire:"🔥",ice:"❄️",thunder:"⚡",dark:"🌑",none:"⚪",phys:"⚔️"};
+      var ekeys = Object.keys(table);
+      for(var i=0;i<ekeys.length;i++){
+        var el = ekeys[i];
+        var mult = table[el];
+        if(mult > 1.0) html += "<span class='attr-badge attr-weak'>弱点 "+ELEM_ICON[el]+"</span>";
+        else if(mult < 1.0) html += "<span class='attr-badge attr-resist'>耐性 "+ELEM_ICON[el]+"</span>";
+      }
+    }
+    attrsEl.innerHTML = html;
+  }
+
   // レアモンスターはHPバーの色も変える
   var hpFill = document.getElementById("enemyHpBar");
   if(v && v.id==="gold") hpFill.style.background = "linear-gradient(90deg,#8a6000,#ffd60a)";
-  else if(v && v.id==="purple") hpFill.style.background = "linear-gradient(90deg,#4a0060,#9b5de5)";
-  else if(v && v.id==="red") hpFill.style.background = "linear-gradient(90deg,#6a0000,#ff4444)";
-  else if(v && v.id==="blue") hpFill.style.background = "linear-gradient(90deg,#002060,#4a9fff)";
-  else if(v && v.id==="silver") hpFill.style.background = "linear-gradient(90deg,#404040,#c0c0c0)";
+  else if(v && v.id==="purple"||v&&v.id==="purple2") hpFill.style.background = "linear-gradient(90deg,#4a0060,#9b5de5)";
+  else if(v && v.id==="red"||v&&v.id==="red2") hpFill.style.background = "linear-gradient(90deg,#6a0000,#ff4444)";
+  else if(v && v.id==="blue"||v&&v.id==="blue2") hpFill.style.background = "linear-gradient(90deg,#002060,#4a9fff)";
+  else if(v && v.id==="silver"||v&&v.id==="silver2") hpFill.style.background = "linear-gradient(90deg,#404040,#c0c0c0)";
   else hpFill.style.background = "linear-gradient(90deg,#5a0000,#cc2020)";
   document.getElementById("enemyHpCur").textContent = G.enemy.hp;
   document.getElementById("enemyHpMax").textContent = G.enemy.maxHp;
@@ -2798,10 +3062,10 @@ function updateInventoryUI(){
       div.className = cls;
       var nameColor = isPotion?"#4caf50":RARITY_COLOR[item.rarity];
       var slotIcon = SLOT_ICON[item.slot]||"";
-      var ilvText = isPotion ? "" : "<span style='color:var(--text-dim);font-size:6px'>+" + (item.ilv||1) + "</span>";
+      var ilvBadge = isPotion ? "" : "<span style='font-size:7px;color:#fff;background:#333;border-radius:3px;padding:0 3px;margin-left:2px'>+" + (item.ilv||1) + "</span>";
       div.innerHTML = "<div class='ii-icon'>"+item.icon+"</div>"
-        + "<div class='ii-name' style='color:"+nameColor+"'>"+item.name+" "+ilvText+"</div>"
-        + (isPotion?"":"<div style='font-size:8px;color:var(--text-dim);margin-top:1px'>"+slotIcon+"</div>")
+        + "<div class='ii-name' style='color:"+nameColor+"'>"+item.name+"</div>"
+        + (isPotion?"":"<div style='font-size:8px;color:var(--text-dim);margin-top:1px'>"+slotIcon+" "+ilvBadge+"</div>")
         + (item.locked?"<div class='lock-badge'>&#128274;</div>":"");
       if(!isPotion){
         (function(idx){ attachLongpress(div, G.inventory[idx], function(){ openItemModal(idx); }); })(i);
@@ -3344,80 +3608,39 @@ function skipCoach(){
   try{ localStorage.setItem("darkLoot_coached","1"); }catch(e){}
 }
 
+// ============================================================
+// DEBUG MENU
+// ============================================================
+function openDebugMenu(){ document.getElementById("debug-modal").classList.add("show"); }
+
+function debugGodSword(){
+  G.equip.rhand = {name:"神滅の剣【DEBUG】", icon:"🗡️", slot:"rhand", rarity:"legendary", wt:"greatsword", atk:999999, def:0, spd:0, crit:100, hp:0, ilv:99, affixes:[]};
+  updateEquipUI(); updatePlayerUI();
+  showToast("⚔️ 神滅の剣を装備！（全敵ワンパン）");
+  sfxOnePunch();
+}
+function debugMaxGold(){ G.gold=9999999; updateGoldUI(); showToast("💰 Gold MAX!"); sfxBuy(); }
+function debugMaxLevel(){
+  G.player.lv=50; G.player.baseAtk=100; G.player.baseDef=80; G.player.baseSpd=60; G.player.baseCrit=30;
+  G.player.maxHp=2000; G.player.hp=2000; G.player.xp=0; G.player.xpNext=Math.floor(100*Math.pow(1.25,49));
+  while(G.skillSlots.length<9) G.skillSlots.push(null);
+  updatePlayerUI(); updateSkillUI(); showToast("⬆️ Level MAX!"); sfxLevelUp();
+}
+function debugUnlockAllFloors(){
+  G.maxFloor=MAX_FLOORS;
+  for(var f=1;f<=MAX_FLOORS;f++){
+    if(!G.floorProgress[f]) G.floorProgress[f]=KILLS_TO_CLEAR*3;
+    if(!G.firstCleared[f]) G.firstCleared[f]=true;
+  }
+  updateFloorProgressUI(); showToast("🗺️ 全フロア解放！");
+}
+function debugUnlockAllSkills(){ for(var i=0;i<SKILLS.length;i++) G.skills[SKILLS[i].id]=SKILLS[i].maxLv; updateSkillUI(); showToast("💎 全スキル解放！"); sfxBuy(); }
+function debugUnlockAllTechs(){ for(var i=0;i<TECHS.length;i++) G.techs[TECHS[i].id]=TECHS[i].maxLv; updateTechUI(); showToast("🔮 全技解放！"); sfxBuy(); }
+
 function confirmReset(){
   document.getElementById("reset-modal").classList.add("show");
 }
 
-// ============================================================
-// DEBUG MENU
-// ============================================================
-function openDebugMenu(){
-  document.getElementById("debug-modal").classList.add("show");
-}
-
-function debugMaxGold(){
-  G.gold = 9999999;
-  updateGoldUI();
-  showToast("💰 Gold MAX!");
-  sfxBuy();
-}
-
-function debugMaxLevel(){
-  G.player.lv = 50;
-  G.player.baseAtk = 100;
-  G.player.baseDef = 80;
-  G.player.baseSpd = 60;
-  G.player.baseCrit = 30;
-  G.player.maxHp = 2000;
-  G.player.hp = 2000;
-  G.player.xp = 0;
-  G.player.xpNext = Math.floor(100*Math.pow(1.25,49));
-  while(G.skillSlots.length < 9) G.skillSlots.push(null);
-  updatePlayerUI(); updateSkillUI();
-  showToast("⬆️ Level MAX!");
-  sfxLevelUp();
-}
-
-function debugUnlockAllFloors(){
-  G.maxFloor = MAX_FLOORS;
-  for(var f=1;f<=MAX_FLOORS;f++){
-    if(!G.floorProgress[f]) G.floorProgress[f] = KILLS_TO_CLEAR * 3;
-    if(!G.firstCleared[f]) G.firstCleared[f] = true;
-  }
-  updateFloorProgressUI();
-  showToast("🗺️ 全フロア解放！");
-}
-
-function debugBestEquip(){
-  var ilv = 20;
-  var bestEquips = {
-    rhand: {name:"覇王の大剣",    icon:"⚔️", slot:"rhand",  rarity:"legendary", wt:"greatsword", atk:80, def:0,  spd:0,  crit:0,  hp:0,   ilv:ilv, affixes:[{name:"攻撃力強化・特大",type:"atk",val:40,grade:4},{name:"会心強化・特大",type:"crit",val:30,grade:4}]},
-    armor: {name:"龍鱗の鎧",      icon:"🥋", slot:"armor",  rarity:"legendary", atk:0,  def:80, spd:0,  crit:0,  hp:300, ilv:ilv, affixes:[{name:"防御力強化・特大",type:"def",val:40,grade:4},{name:"HP強化・特大",type:"hp",val:300,grade:4}]},
-    helm:  {name:"覇者の兜",      icon:"⛑️", slot:"helm",   rarity:"legendary", atk:0,  def:50, spd:0,  crit:10, hp:200, ilv:ilv, affixes:[{name:"会心強化・特大",type:"crit",val:30,grade:4},{name:"防御力強化・特大",type:"def",val:40,grade:4}]},
-    ring:  {name:"万能の指輪",    icon:"💍", slot:"ring",   rarity:"legendary", atk:30, def:30, spd:20, crit:10, hp:100, ilv:ilv, affixes:[{name:"攻撃力強化・特大",type:"atk",val:40,grade:4},{name:"速度強化・特大",type:"spd",val:30,grade:4}]},
-    boots: {name:"疾風の靴",      icon:"👢", slot:"boots",  rarity:"legendary", atk:0,  def:20, spd:50, crit:5,  hp:0,   ilv:ilv, affixes:[{name:"速度強化・特大",type:"spd",val:30,grade:4},{name:"会心強化・特大",type:"crit",val:30,grade:4}]},
-    amulet:{name:"神話のお守り",  icon:"📿", slot:"amulet", rarity:"legendary", atk:40, def:40, spd:20, crit:20, hp:200, ilv:ilv, affixes:[{name:"攻撃力強化・特大",type:"atk",val:40,grade:4},{name:"HP強化・特大",type:"hp",val:300,grade:4}]}
-  };
-  var slots = Object.keys(bestEquips);
-  for(var i=0;i<slots.length;i++) G.equip[slots[i]] = bestEquips[slots[i]];
-  updateEquipUI(); updatePlayerUI();
-  showToast("🎁 最強装備装備！");
-  sfxEquip();
-}
-
-function debugUnlockAllTechs(){
-  for(var i=0;i<TECHS.length;i++) G.techs[TECHS[i].id] = TECHS[i].maxLv;
-  updateTechUI();
-  showToast("🔮 全技解放！");
-  sfxBuy();
-}
-
-function debugUnlockAllSkills(){
-  for(var i=0;i<SKILLS.length;i++) G.skills[SKILLS[i].id] = SKILLS[i].maxLv;
-  updateSkillUI();
-  showToast("💎 全スキル解放！");
-  sfxBuy();
-}
 
 function executeReset(){
   try{ localStorage.removeItem("darkLoot_v5"); }catch(e){}
@@ -3492,6 +3715,94 @@ function openStats(){
 
   document.getElementById("statsContent").innerHTML = html;
   document.getElementById("stats-modal").classList.add("show");
+}
+
+// ============================================================
+// ACHIEVEMENTS
+// ============================================================
+function checkAchievements(){
+  if(!G.achievements) G.achievements={};
+  var newUnlocked = [];
+  for(var i=0;i<ACHIEVEMENTS.length;i++){
+    var a = ACHIEVEMENTS[i];
+    if(G.achievements[a.id]) continue;
+    try{
+      if(a.check(G)){
+        G.achievements[a.id] = true;
+        newUnlocked.push(a);
+      }
+    }catch(e){}
+  }
+  if(newUnlocked.length>0){
+    for(var i=0;i<newUnlocked.length;i++){
+      setTimeout((function(a){
+        return function(){
+          showToast("🏆 実績解除！「"+a.title+"\"");
+          sfxLevelUp();
+        };
+      })(newUnlocked[i]), i*1200);
+    }
+  }
+}
+
+function claimAchievement(id){
+  if(!G.achClaimed) G.achClaimed={};
+  if(G.achClaimed[id]){ showToast("受取済みです"); return; }
+  if(!G.achievements[id]){ showToast("未達成です"); return; }
+  var a = null;
+  for(var i=0;i<ACHIEVEMENTS.length;i++) if(ACHIEVEMENTS[i].id===id){ a=ACHIEVEMENTS[i]; break; }
+  if(!a) return;
+  G.achClaimed[id] = true;
+  G.gold += a.reward;
+  updateGoldUI();
+  sfxBuy();
+  showToast("💰 "+a.reward.toLocaleString()+"G 受取！");
+  openAchievements();
+}
+
+function openAchievements(){
+  if(!G.achievements) G.achievements={};
+  if(!G.achClaimed) G.achClaimed={};
+  checkAchievements();
+  var cats = [];
+  for(var i=0;i<ACHIEVEMENTS.length;i++) if(cats.indexOf(ACHIEVEMENTS[i].cat)<0) cats.push(ACHIEVEMENTS[i].cat);
+  var total = ACHIEVEMENTS.length;
+  var done = 0;
+  for(var i=0;i<ACHIEVEMENTS.length;i++) if(G.achievements[ACHIEVEMENTS[i].id]) done++;
+  var unclaimed = 0;
+  for(var i=0;i<ACHIEVEMENTS.length;i++) if(G.achievements[ACHIEVEMENTS[i].id]&&!G.achClaimed[ACHIEVEMENTS[i].id]) unclaimed++;
+
+  var html = "<div style='text-align:center;margin-bottom:12px'>";
+  html += "<span style='font-size:12px;color:var(--gold)'>"+done+" / "+total+" 達成</span>";
+  if(unclaimed>0) html += " <span style='font-size:11px;color:#4caf50;margin-left:8px'>"+unclaimed+"個 未受取</span>";
+  html += "</div>";
+
+  for(var ci=0;ci<cats.length;ci++){
+    var cat = cats[ci];
+    html += "<div style='font-size:10px;color:var(--text-dim);letter-spacing:2px;margin:12px 0 6px'>"+cat+"</div>";
+    for(var ai=0;ai<ACHIEVEMENTS.length;ai++){
+      var a = ACHIEVEMENTS[ai];
+      if(a.cat!==cat) continue;
+      var achieved = G.achievements[a.id];
+      var claimed  = G.achClaimed[a.id];
+      var rc = ACH_RANK_COLOR[a.rank];
+      html += "<div style='display:flex;align-items:center;gap:10px;padding:8px;margin-bottom:6px;background:var(--panel2);border:1px solid "+(achieved?"var(--gold)":"var(--border)")+";border-radius:10px;opacity:"+(achieved?1:0.5)+"'>";
+      html += "<div style='font-size:22px'>"+(achieved?"🏆":"🔒")+"</div>";
+      html += "<div style='flex:1'>";
+      html += "<div style='font-size:12px;font-weight:700;color:"+(achieved?rc:"var(--text-dim)")+"'>"+a.title+" <span style='font-size:9px'>"+ACH_RANK_LABEL[a.rank]+"</span></div>";
+      html += "<div style='font-size:10px;color:var(--text-dim)'>"+a.desc+"</div>";
+      html += "<div style='font-size:10px;color:var(--gold)'>報酬: "+a.reward.toLocaleString()+"G</div>";
+      html += "</div>";
+      if(achieved && !claimed){
+        html += "<div onclick='claimAchievement(\""+a.id+"\")' style='padding:6px 12px;background:linear-gradient(135deg,#1a1200,#3a2a00);border:1px solid var(--gold);border-radius:8px;color:var(--gold);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap'>受取</div>";
+      } else if(claimed){
+        html += "<div style='padding:6px 12px;color:#4caf50;font-size:11px'>✔ 受取済</div>";
+      }
+      html += "</div>";
+    }
+  }
+  document.getElementById("achContent").innerHTML = html;
+  document.getElementById("ach-modal").classList.add("show");
 }
 
 function openHelp(){
@@ -3640,27 +3951,33 @@ function hideLongpressPopup(){
 }
 
 function attachLongpress(div, item, tapFn){
+  var startX = 0, startY = 0, moved = false;
   div.addEventListener("touchstart", function(e){
     var t = e.touches[0];
+    startX = t.clientX; startY = t.clientY; moved = false;
     _lpTimer = setTimeout(function(){
-      showLongpressPopup(item, t.clientX, t.clientY);
+      if(!moved) showLongpressPopup(item, startX, startY);
     }, 500);
-  }, {passive:false});
+  }, {passive:true});
+  div.addEventListener("touchmove", function(e){
+    var t = e.touches[0];
+    var dx = Math.abs(t.clientX - startX);
+    var dy = Math.abs(t.clientY - startY);
+    if(dx > 8 || dy > 8){
+      moved = true;
+      clearTimeout(_lpTimer);
+      hideLongpressPopup();
+    }
+  }, {passive:true});
   div.addEventListener("touchend", function(e){
     clearTimeout(_lpTimer);
     var el = document.getElementById("longpress-popup");
     if(el && el.className==="show"){
       hideLongpressPopup();
-      e.preventDefault();
-      e.stopPropagation();
       return;
     }
-    tapFn();
+    if(!moved) tapFn();
   });
-  div.addEventListener("touchmove", function(){
-    clearTimeout(_lpTimer);
-    hideLongpressPopup();
-  }, {passive:true});
 }
 
 function addLog(html){
@@ -3812,8 +4129,8 @@ function manageAutoHeal(){
       if(G.player.hp < G.player.maxHp){
         var sc2 = getSetCounts();
         var rate = 0;
-        if((sc2.kodai||0)>=4)   rate += 0.02;
-        if((sc2.shinsei||0)>=4) rate += 0.05;
+        if((sc2.kodai||0)>=4)   rate += 0.008;
+        if((sc2.shinsei||0)>=4) rate += 0.020;
         var heal = Math.floor(G.player.maxHp*rate);
         if(heal>0){
           G.player.hp = Math.min(G.player.maxHp, G.player.hp+heal);
@@ -3868,6 +4185,8 @@ function loadGame(){
   if(!G.floorProgress) G.floorProgress={};
   if(!G.firstCleared) G.firstCleared={};
   if(!G.dangerLevel) G.dangerLevel=0;
+  if(!G.achievements) G.achievements={};
+  if(!G.achClaimed) G.achClaimed={};
   if(!G.techs) G.techs={};
   if(!G.techSlots) G.techSlots=[];
   if(!G.playerBuffs) G.playerBuffs={};
@@ -3889,6 +4208,7 @@ function loadGame(){
 }
 
 setInterval(saveGame, 10000);
+setInterval(checkAchievements, 30000);
 
 // ============================================================
 // INIT
