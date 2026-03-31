@@ -116,6 +116,14 @@ body{display:flex;flex-direction:column;align-items:center;min-height:100dvh}
 .inv-item.rarity-set{border-color:#d400c8;box-shadow:0 0 8px #d400c833}
 .inv-item.locked{box-shadow:inset 0 0 0 1px #c9a84c88}
 .inv-item.is-potion{border-color:#4caf50}
+.potion-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;padding:8px;background:var(--panel2);border:1px solid var(--border);border-radius:10px}
+.potion-btn{display:flex;flex-direction:column;align-items:center;padding:6px 8px;background:var(--panel);border:1px solid #4caf5066;border-radius:8px;cursor:pointer;min-width:52px;position:relative}
+.potion-btn:active{transform:scale(.94)}
+.potion-btn .pb-icon{font-size:20px}
+.potion-btn .pb-name{font-size:8px;color:var(--text-dim);margin-top:2px;text-align:center;line-height:1.2}
+.potion-btn .pb-count{position:absolute;top:2px;right:4px;font-size:9px;font-weight:700;color:#4caf50}
+.potion-btn.empty{opacity:.35;cursor:default}
+.potion-btn.buffed{border-color:#ffd60a66}
 .inv-empty{opacity:.25;cursor:default}
 .lock-badge{position:absolute;top:3px;right:3px;font-size:9px}
 .autosell-row{display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
@@ -405,6 +413,7 @@ animation:popFade .15s ease;
         </div>
       </div>
       <div class="battle-log" id="battleLog"><div class="log-line">戦闘開始！<span>オートバトル中...</span></div></div>
+      <div class="potion-bar" id="potionBar"></div>
       <div class="battle-controls">
         <button class="btn btn-primary" id="battleBtn" onclick="toggleBattle()">⚔ オート戦闘 ON</button>
         <button class="btn btn-secondary" onclick="openFloorModal()">🗺 フロア</button>
@@ -1270,8 +1279,9 @@ var G = {
   floorProgress:{},
   firstCleared:{},
   dangerLevel:0,
-  achievements:{},     // {achId: true} 達成フラグ
-  achClaimed:{},       // {achId: true} 報酬受取済み
+  achievements:{},
+  achClaimed:{},
+  potions:{},
   enemy:null,
   enemyBuffs:{},      // 敵への付与効果 {buffId: remainTurns}
   playerBuffs:{},     // プレイヤーへの付与効果 {buffId: remainTurns}
@@ -1494,6 +1504,7 @@ function getStats(){
     }
   }
   if(isDualWield()) spd = Math.floor(spd*1.10);
+  spd = Math.floor(spd * (1 + getPlayerBuff("pot_spd")));
 
   // ユニークスキル効果（スロットにセットされている時のみ）
   for(var i=0;i<G.skillSlots.length;i++){
@@ -1904,9 +1915,9 @@ function doBattle(){
 
   // バフ補正をATKに反映
   var atkMod = 1.0;
-  atkMod += getPlayerBuff("atk") + getPlayerBuff("atk3");
+  atkMod += getPlayerBuff("atk") + getPlayerBuff("atk3") + getPlayerBuff("pot_atk");
   if(G.playerBuffs && G.playerBuffs["berserk"]){ atkMod += 0.40; }
-  var defMod = 1.0 + getPlayerBuff("def") + getPlayerBuff("def2") + getPlayerBuff("def3");
+  var defMod = 1.0 + getPlayerBuff("def") + getPlayerBuff("def2") + getPlayerBuff("def3") + getPlayerBuff("pot_def");
   var eAtkMod = 1.0 + getEnemyBuff("eatk");
   var eDefMod = 1.0 + getEnemyBuff("edef");
   var eCollapse = G.enemyBuffs && G.enemyBuffs["ecollapse"];
@@ -2600,19 +2611,15 @@ function switchShopTab(tab){
 function renderShop(){
   var el = document.getElementById("shopContent");
   if(shopTab==="item"){
-    var potions = [
-      {id:"potS",name:"ポーション・小",desc:"HP+50回復",icon:"🧪",cost:30,heal:50},
-      {id:"potM",name:"ポーション・中",desc:"HP+150回復",icon:"🍶",cost:80,heal:150},
-      {id:"potL",name:"ポーション・大",desc:"HP+400回復",icon:"💊",cost:200,heal:400}
-    ];
     var html = "";
-    for(var i=0;i<potions.length;i++){
-      var p = potions[i];
+    for(var i=0;i<POTION_DEFS.length;i++){
+      var p = POTION_DEFS[i];
+      var cnt = G.potions ? (G.potions[p.id]||0) : 0;
       var dimClass = G.gold<p.cost ? " dim" : "";
       html += '<div class="shop-item">';
       html += '<div class="shop-item-icon">' + p.icon + '</div>';
-      html += '<div class="shop-item-body"><div class="shop-item-name">' + p.name + '</div><div class="shop-item-desc">' + p.desc + '</div></div>';
-      html += '<button class="shop-buy-btn' + dimClass + '" onclick="buyPotion(\'' + p.id + '\',' + p.cost + ',' + p.heal + ')">' + p.cost + 'G 購入</button>';
+      html += '<div class="shop-item-body"><div class="shop-item-name">' + p.name + ' <span style="color:#4caf50;font-size:10px">×'+cnt+'</span></div><div class="shop-item-desc">' + p.desc + '</div></div>';
+      html += '<div class="shop-buy-btn' + dimClass + '" onclick="buyPotion(\'' + p.id + '\',' + p.cost + ')">' + p.cost + 'G</div>';
       html += '</div>';
     }
     el.innerHTML = html;
@@ -2677,29 +2684,69 @@ function renderShop(){
   }
 }
 
-function buyPotion(id, cost, heal){
+// ポーション定義
+var POTION_DEFS = [
+  {id:"potS",   name:"小ポーション",    icon:"🧪", cost:100,   heal:50,   buff:null,             desc:"HP+50回復"},
+  {id:"potM",   name:"中ポーション",    icon:"🍶", cost:400,   heal:150,  buff:null,             desc:"HP+150回復"},
+  {id:"potL",   name:"大ポーション",    icon:"💊", cost:1200,  heal:400,  buff:null,             desc:"HP+400回復"},
+  {id:"elixir", name:"エリクサー",      icon:"⚗️", cost:8000,  heal:99999,buff:null,             desc:"HP全回復"},
+  {id:"berserk",name:"バーサーカー液",  icon:"💉", cost:5000,  heal:0,    buff:{key:"pot_atk",val:0.50,turns:10}, desc:"ATK+50%（10ターン）"},
+  {id:"shield", name:"シールドポーション",icon:"🛡️",cost:5000,  heal:0,    buff:{key:"pot_def",val:0.50,turns:10}, desc:"DEF+50%（10ターン）"},
+  {id:"haste",  name:"ヘイストポーション",icon:"⚡",cost:5000,  heal:0,    buff:{key:"pot_spd",val:0.50,turns:10}, desc:"SPD+50%（10ターン）"}
+];
+
+function findPotion(id){ for(var i=0;i<POTION_DEFS.length;i++) if(POTION_DEFS[i].id===id) return POTION_DEFS[i]; return null; }
+
+function buyPotion(id, cost){
   if(G.gold<cost){ showToast("ゴールドが足りません"); return; }
-  if(G.inventory.length>=64){ showToast("インベントリが満杯です"); return; }
   G.gold -= cost;
-  var name = id==="potS"?"ポーション・小":id==="potM"?"ポーション・中":"ポーション・大";
-  var icon = id==="potS"?"🧪":id==="potM"?"🍶":"💊";
-  G.inventory.push({id:id,name:name,icon:icon,rarity:"potion",heal:heal,slot:"potion",locked:false,affixes:[],ilv:1});
-  updateGoldUI(); updateInventoryUI(); renderShop();
+  if(!G.potions) G.potions={};
+  G.potions[id] = (G.potions[id]||0)+1;
+  updateGoldUI(); updatePotionBar(); renderShop();
   sfxBuy();
-  showToast("ポーション購入！");
+  var p = findPotion(id);
+  showToast((p?p.name:"ポーション")+"購入！ (×"+(G.potions[id]||1)+")");
 }
 
-function usePotion(idx){
-  var item = G.inventory[idx];
-  if(!item||item.slot!=="potion") return;
-  var actual = Math.min(item.heal, G.player.maxHp - G.player.hp);
-  if(actual===0){ showToast("HPは満タンです"); return; }
-  G.player.hp = Math.min(G.player.maxHp, G.player.hp + item.heal);
-  G.inventory.splice(idx,1);
+function usePotion(id){
+  if(!G.potions||!(G.potions[id]>0)){ showToast("ポーションがありません"); return; }
+  var p = findPotion(id);
+  if(!p) return;
+  if(p.heal>0){
+    var actual = Math.min(p.heal, G.player.maxHp - G.player.hp);
+    if(actual===0){ showToast("HPは満タンです"); return; }
+    G.player.hp = Math.min(G.player.maxHp, G.player.hp + p.heal);
+    showDmgNum(actual, false, false, false, true);
+    showToast("HP +" + actual + " 回復！");
+  }
+  if(p.buff){
+    if(!G.playerBuffs) G.playerBuffs={};
+    applyPlayerBuff(p.buff.key, p.buff.val, p.buff.turns);
+    showToast(p.name+"発動！（"+p.buff.turns+"ターン）");
+  }
+  G.potions[id]--;
   sfxPotion();
-  showDmgNum(actual, false, false, false, true);
-  updatePlayerUI(); updateInventoryUI();
-  showToast("HP +" + actual + " 回復！");
+  updatePlayerUI(); updatePotionBar();
+}
+
+function updatePotionBar(){
+  var bar = document.getElementById("potionBar");
+  if(!bar) return;
+  if(!G.potions) G.potions={};
+  var html = "";
+  for(var i=0;i<POTION_DEFS.length;i++){
+    var p = POTION_DEFS[i];
+    var cnt = G.potions[p.id]||0;
+    var isBuff = !!p.buff;
+    var isEmpty = cnt===0;
+    var cls = "potion-btn"+(isEmpty?" empty":"")+(isBuff?" buffed":"");
+    html += "<div class='"+cls+"' onclick='usePotion(\""+p.id+"\")'>";
+    html += "<span class='pb-count'>×"+cnt+"</span>";
+    html += "<span class='pb-icon'>"+p.icon+"</span>";
+    html += "<span class='pb-name'>"+p.name+"</span>";
+    html += "</div>";
+  }
+  bar.innerHTML = html;
 }
 
 function smithReroll(idx, cost){ smithReroll2("inv","",idx,cost); }
@@ -3050,28 +3097,26 @@ function renderSetBonusDisplay(){
 
 function updateInventoryUI(){
   var grid = document.getElementById("invGrid");
-  document.getElementById("invCount").textContent = G.inventory.length;
+  var SLOT_ICON = {rhand:"⚔️",lhand:"🛡️",armor:"🥋",helm:"⛑️",ring:"💍",boots:"👢",amulet:"📿"};
+  // ポーションを除いた装備品のみ表示
+  var items = G.inventory.filter(function(it){ return it && it.slot !== "potion"; });
+  document.getElementById("invCount").textContent = items.length;
   grid.innerHTML = "";
-  var SLOT_ICON = {rhand:"⚔️",lhand:"🛡️",armor:"🥋",helm:"⛑️",ring:"💍",boots:"👢",amulet:"📿",potion:"🧪"};
   for(var i=0;i<64;i++){
-    var item = G.inventory[i];
+    var item = items[i];
     var div = document.createElement("div");
     if(item){
-      var isPotion = item.slot==="potion";
-      var cls = "inv-item " + (isPotion?"is-potion":"rarity-"+item.rarity) + (item.locked?" locked":"");
+      var cls = "inv-item rarity-"+item.rarity + (item.locked?" locked":"");
       div.className = cls;
-      var nameColor = isPotion?"#4caf50":RARITY_COLOR[item.rarity];
+      var nameColor = RARITY_COLOR[item.rarity];
       var slotIcon = SLOT_ICON[item.slot]||"";
-      var ilvBadge = isPotion ? "" : "<span style='font-size:7px;color:#fff;background:#333;border-radius:3px;padding:0 3px;margin-left:2px'>+" + (item.ilv||1) + "</span>";
+      var ilvBadge = "<span style='font-size:7px;color:#fff;background:#333;border-radius:3px;padding:0 3px;margin-left:2px'>+" + (item.ilv||1) + "</span>";
       div.innerHTML = "<div class='ii-icon'>"+item.icon+"</div>"
         + "<div class='ii-name' style='color:"+nameColor+"'>"+item.name+"</div>"
-        + (isPotion?"":"<div style='font-size:8px;color:var(--text-dim);margin-top:1px'>"+slotIcon+" "+ilvBadge+"</div>")
+        + "<div style='font-size:8px;color:var(--text-dim);margin-top:1px'>"+slotIcon+" "+ilvBadge+"</div>"
         + (item.locked?"<div class='lock-badge'>&#128274;</div>":"");
-      if(!isPotion){
-        (function(idx){ attachLongpress(div, G.inventory[idx], function(){ openItemModal(idx); }); })(i);
-      } else {
-        (function(idx){ div.onclick = function(){ usePotion(idx); }; })(i);
-      }
+      var invIdx = G.inventory.indexOf(item);
+      (function(idx){ attachLongpress(div, G.inventory[idx], function(){ openItemModal(idx); }); })(invIdx);
     } else {
       div.className = "inv-item inv-empty";
       div.innerHTML = "<div style='font-size:14px;opacity:.3'>&#9135;</div>";
@@ -4206,6 +4251,7 @@ function loadGame(){
   if(!G.floorProgress) G.floorProgress={};
   if(!G.firstCleared) G.firstCleared={};
   if(!G.dangerLevel) G.dangerLevel=0;
+  if(!G.potions) G.potions={};
   if(!G.achievements) G.achievements={};
   if(!G.achClaimed) G.achClaimed={};
   if(!G.techs) G.techs={};
@@ -4242,6 +4288,7 @@ updateFloorProgressUI();
 document.getElementById("floorNum").textContent = G.floor;
 manageAutoHeal();
 updateDangerUI();
+updatePotionBar();
 // 初回起動チェック
 try{ if(!localStorage.getItem("darkLoot_coached")) startCoach(); }catch(e){}
 </script>
