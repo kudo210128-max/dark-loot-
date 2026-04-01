@@ -2215,6 +2215,7 @@ function onEnemyDead(isCrit, isOnePunch){
       if(G.floor===G.maxFloor && G.maxFloor<MAX_FLOORS){
         G.maxFloor++;
         showToast("フロア"+G.maxFloor+" 解放！");
+        updateFloorBG();
       }
     } else if(cycle===3){
       showToast("踏破率300%！セット装備ドロップ解放！");
@@ -2343,11 +2344,50 @@ function openFloorModal(){
   document.getElementById("floor-modal").classList.add("show");
 }
 
+// フロアごとの背景テーマ
+var FLOOR_THEMES = {
+  1:  {bg:"#0a0e08", panel:"#111409", accent:"#3a5a2a", name:"深森のダンジョン"},
+  2:  {bg:"#0a0e08", panel:"#111409", accent:"#3a5a2a", name:"深森のダンジョン"},
+  3:  {bg:"#0a0e08", panel:"#111409", accent:"#3a5a2a", name:"深森のダンジョン"},
+  4:  {bg:"#0d0a06", panel:"#1a1208", accent:"#6b4820", name:"地下洞窟"},
+  5:  {bg:"#0d0a06", panel:"#1a1208", accent:"#6b4820", name:"地下洞窟"},
+  6:  {bg:"#0d0a06", panel:"#1a1208", accent:"#6b4820", name:"地下洞窟"},
+  7:  {bg:"#080a12", panel:"#0e1020", accent:"#2a3a7a", name:"魔法の迷宮"},
+  8:  {bg:"#080a12", panel:"#0e1020", accent:"#2a3a7a", name:"魔法の迷宮"},
+  9:  {bg:"#080a12", panel:"#0e1020", accent:"#2a3a7a", name:"魔法の迷宮"},
+  10: {bg:"#120608", panel:"#200a0c", accent:"#7a1a20", name:"炎の洞窟"},
+  11: {bg:"#120608", panel:"#200a0c", accent:"#7a1a20", name:"炎の洞窟"},
+  12: {bg:"#120608", panel:"#200a0c", accent:"#7a1a20", name:"炎の洞窟"},
+  13: {bg:"#080510", panel:"#120a1e", accent:"#4a1a6a", name:"冥界の深淵"},
+  14: {bg:"#080510", panel:"#120a1e", accent:"#4a1a6a", name:"冥界の深淵"},
+  15: {bg:"#080510", panel:"#120a1e", accent:"#4a1a6a", name:"冥界の深淵"},
+  16: {bg:"#04080f", panel:"#080f1e", accent:"#0a2a5a", name:"虚空の彼方"},
+  17: {bg:"#04080f", panel:"#080f1e", accent:"#0a2a5a", name:"虚空の彼方"},
+  18: {bg:"#04080f", panel:"#080f1e", accent:"#0a2a5a", name:"虚空の彼方"},
+  19: {bg:"#0d0a02", panel:"#1a1504", accent:"#5a4800", name:"神域"},
+  20: {bg:"#0d0a02", panel:"#1a1504", accent:"#5a4800", name:"神域"}
+};
+
+function updateFloorBG(){
+  var theme = FLOOR_THEMES[G.floor] || FLOOR_THEMES[1];
+  document.body.style.background = theme.bg;
+  // バトルエリアのアクセントカラーを変更
+  var battleArea = document.getElementById("battleArea");
+  if(battleArea) battleArea.style.borderColor = theme.accent;
+  // タブバーの背景も変更
+  var tabs = document.querySelector(".main-tabs");
+  if(tabs) tabs.style.background = theme.bg;
+  // CSS変数を更新
+  document.documentElement.style.setProperty("--bg", theme.bg);
+  document.documentElement.style.setProperty("--panel", theme.panel);
+}
+
 function selectFloor(f){
   if(f > G.maxFloor) return;
   G.floor = f;
   document.getElementById("floorNum").textContent = f;
   updateFloorProgressUI();
+  updateFloorBG();
   spawnEnemy();
   addLog("<span class='log-gold'>フロア" + f + "</span> に移動！");
   document.getElementById("floor-modal").classList.remove("show");
@@ -3266,6 +3306,7 @@ function acceptDanger(){
   // フロア1に戻す
   G.floor = 1;
   document.getElementById("floorNum").textContent = 1;
+  updateFloorBG();
   spawnEnemy();
   updateFloorProgressUI();
 }
@@ -4289,6 +4330,7 @@ document.getElementById("floorNum").textContent = G.floor;
 manageAutoHeal();
 updateDangerUI();
 updatePotionBar();
+updateFloorBG();
 // 初回起動チェック
 try{ if(!localStorage.getItem("darkLoot_coached")) startCoach(); }catch(e){}
 </script>
